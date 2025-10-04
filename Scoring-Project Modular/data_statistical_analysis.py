@@ -238,7 +238,7 @@ def plot_lower_correlation(df, target="yd", threshold=0.8, figsize=(10, 8), cmap
     high_corr = corr_unstacked[corr_unstacked >= threshold].sort_values(ascending=False)
 
     if not high_corr.empty:
-        print(f"\n⚠ Highly correlated variable pairs (|r| ≥ {threshold}):\n")
+        print(f"\n Highly correlated variable pairs (|r| ≥ {threshold}):\n")
         high_corr_pairs = pd.DataFrame(high_corr).reset_index()
         high_corr_pairs.columns = ["Variable_1", "Variable_2", "|r|"]
         print(high_corr_pairs.to_string(index=False))

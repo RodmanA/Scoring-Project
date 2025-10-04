@@ -5,9 +5,10 @@ Relevent for Question 11 to
 """
 from data_statistical_analysis import significance_stars
 import statsmodels.api as sm
-from sklearn.metrics import roc_curve, roc_auc_score
+from sklearn.metrics import roc_curve, roc_auc_score,confusion_matrix
 import matplotlib.pyplot as plt
 from tabulate import tabulate
+import pandas as pd
 import numpy as np
 
 
@@ -131,3 +132,65 @@ def compute_auc_for_models(results_dict, y, X):
     plt.grid(True, linestyle="--", alpha=0.6)
     plt.tight_layout()
     plt.show()
+
+
+def forecast_default(models_dict, new_df, y_true, explanatory_vars):
+    """
+    Use trained models to forecast default probabilities on a new dataset,
+    then evaluate their performance (AUC, confusion matrix, ROC curves).
+
+    Returns results_df a Table summarizing AUC and accuracy for each model.
+    """
+    # --- Prepare data ---
+    X_new = new_df[explanatory_vars].copy()
+    X_new = sm.add_constant(X_new, has_constant="add")
+
+    y_true = pd.Series(y_true).reset_index(drop=True)
+    predictions = pd.DataFrame(index=new_df.index)
+
+    auc_results = []
+    plt.figure(figsize=(7, 6))
+    print("\n Model Forecast Evaluation\n")
+
+    for name, model in models_dict.items():
+        try:
+            # Predict probabilities
+            y_pred = model.predict(X_new)
+            predictions[f"P_hat_{name}"] = y_pred
+
+            # Compute AUC
+            auc = roc_auc_score(y_true, y_pred)
+
+            # ROC curve
+            fpr, tpr, _ = roc_curve(y_true, y_pred)
+            plt.plot(fpr, tpr, label=f"{name} (AUC = {auc:.3f})")
+
+            # Optional: confusion matrix (threshold 0.5)
+            y_pred_class = (y_pred >= 0.5).astype(int)
+            tn, fp, fn, tp = confusion_matrix(y_true, y_pred_class).ravel()
+            accuracy = (tp + tn) / (tp + tn + fp + fn)
+
+            auc_results.append([name, len(y_true), auc, accuracy, tp, fp, fn, tn])
+
+            print(f" {name}: AUC = {auc:.3f}, Accuracy = {accuracy:.3f}")
+
+        except Exception as e:
+            print(f" {name} prediction failed: {e}")
+            auc_results.append([name, len(y_true), np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
+
+    # --- Plot ROC curves ---
+    plt.plot([0, 1], [0, 1], "k--", label="Random chance")
+    plt.xlabel("False Positive Rate (1 - Specificity)")
+    plt.ylabel("True Positive Rate (Sensitivity)")
+    plt.title("ROC Curves – Out-of-Sample Default Prediction")
+    plt.legend(loc="lower right")
+    plt.grid(True, linestyle="--", alpha=0.6)
+    plt.tight_layout()
+    plt.show()
+
+    # --- Tabulated summary ---
+    headers = ["Model", "N Obs", "AUC", "Accuracy", "TP", "FP", "FN", "TN"]
+    print("\n Model Evaluation Summary\n")
+    print(tabulate(auc_results, headers=headers, tablefmt="github", floatfmt=".3f"))
+
+    return pd.DataFrame(auc_results, columns=headers)

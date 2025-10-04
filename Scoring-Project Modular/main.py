@@ -4,7 +4,7 @@ This module is the main entry point for the program
 """
 from data_cleaning import get_df_csv, adjust_french_decimal, split_data
 from data_statistical_analysis import plot_ratio_distributions, statistical_tests, plot_lower_correlation, plot_top_corr
-from regression_estimation import run_estimation_for, compute_auc_for_models
+from regression_estimation import run_estimation_for, compute_auc_for_models, forecast_default
 import pandas as pd
 import warnings
 
@@ -27,25 +27,29 @@ print(y_train.head())
 
 # Question 3 to 10 Answers here
 "Step 2: Vizualisation and analysis of the data"
-test_df = pd.concat([y_test, X_test], axis=1)
-print(test_df)
-plot_ratio_distributions(test_df, target="yd")
+train_df = pd.concat([y_train, X_train], axis=1)
+print(train_df)
+plot_ratio_distributions(train_df, target="yd")
 
-table1, table2, table3, table4 = statistical_tests(test_df, target="yd")
+table1, table2, table3, table4 = statistical_tests(train_df, target="yd")
 
-corr_matrix = plot_lower_correlation(test_df, target="yd")
+corr_matrix = plot_lower_correlation(train_df, target="yd")
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", category=FutureWarning)
-    plot_top_corr(test_df, target_col="yd", ranking_table=table4, rank_col="Rank_corr", top_n=5)
+    plot_top_corr(train_df, target_col="yd", ranking_table=table4, rank_col="Rank_corr", top_n=5)
 
 # Question 11 to X Answers here
 "Step 3: Regression and estimation"
 # Question 11
 explanatory = ["tdta"]
-models_Q11 = run_estimation_for(test_df, target="yd", explanatory_vars=explanatory, output="summary")
+models_Q11 = run_estimation_for(train_df, target="yd", explanatory_vars=explanatory, output="summary")
 
 # Question 13
-explanatory = ["tdta", "opita", "lta"]
-models_Q13 = run_estimation_for(test_df, target="yd", explanatory_vars=explanatory, output="tabulate")
-compute_auc_for_models(models_Q13, y_test, X_test[explanatory])
+explanatory = ["tdta", "opita", "lta","gempl"]
+models_Q13 = run_estimation_for(train_df, target="yd", explanatory_vars=explanatory, output="tabulate")
+compute_auc_for_models(models_Q13, y_train, X_train[explanatory])
+
+# Question 14
+forecast_df = forecast_default(models_Q13, X_test,y_test, explanatory)
+print(forecast_df.head())
