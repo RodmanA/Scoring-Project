@@ -4,7 +4,7 @@ This module is the main entry point for the program
 """
 from data_cleaning import get_df_csv, adjust_french_decimal, split_data
 from data_statistical_analysis import plot_ratio_distributions, statistical_tests, plot_lower_correlation, plot_top_corr
-from regression_estimation import run_estimation_for, compute_auc_for_models, forecast_default
+from regression_estimation import run_estimation_for, compute_auc_for_models, forecast_default, pearson_residuals
 import pandas as pd
 import warnings
 
@@ -46,10 +46,13 @@ explanatory = ["tdta"]
 models_Q11 = run_estimation_for(train_df, target="yd", explanatory_vars=explanatory, output="summary")
 
 # Question 13
-explanatory = ["tdta", "opita", "lta","gempl"]
+explanatory = ["tdta", "opita", "lta", "gempl"]
 models_Q13 = run_estimation_for(train_df, target="yd", explanatory_vars=explanatory, output="tabulate")
 compute_auc_for_models(models_Q13, y_train, X_train[explanatory])
 
 # Question 14
-forecast_df = forecast_default(models_Q13, X_test,y_test, explanatory)
+forecast_df = forecast_default(models_Q13, X_test, y_test, explanatory)
 print(forecast_df.head())
+
+# Question 15/16
+pearson_residuals(models_Q13, y_test, X_test[explanatory])
