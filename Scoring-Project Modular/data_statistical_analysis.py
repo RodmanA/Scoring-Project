@@ -107,7 +107,7 @@ def statistical_tests(df, target="yd"):
     cols = [c for c in df.columns if c != target]
     table1, table2, table3 = [], [], []
 
-    # ---- Compute all stats ----
+    # - Compute all stats -
     for col in cols:
         data = df[[col, target]].dropna()
 
@@ -119,24 +119,24 @@ def statistical_tests(df, target="yd"):
         if N_def == 0 or N_nondef == 0:
             continue
 
-        # --- Skewness & Kurtosis ---
+        #  Skewness & Kurtosis 
         skew_def, kurt_def = stats.skew(defaulted), stats.kurtosis(defaulted)
         skew_nondef, kurt_nondef = stats.skew(non_defaulted), stats.kurtosis(non_defaulted)
 
-        # --- Jarque–Bera ---
+        #  Jarque–Bera 
         jb_def_stat, jb_def_pval = stats.jarque_bera(defaulted)
         jb_nondef_stat, jb_nondef_pval = stats.jarque_bera(non_defaulted)
 
-        # --- T-test ---
+        #  T-test 
         t_stat, t_pval = stats.ttest_ind(defaulted, non_defaulted, equal_var=False, nan_policy="omit")
 
-        # --- Kolmogorov–Smirnov ---
+        #  Kolmogorov–Smirnov 
         ks_stat, ks_pval = stats.ks_2samp(defaulted, non_defaulted)
 
-        # --- Pearson correlation ---
+        #  Pearson correlation 
         corr, corr_pval = stats.pearsonr(data[col], data[target])
 
-        # ---- Table 1 ----
+        # - Table 1 -
         table1.append([
             col, N_nondef, N_def,
             round(skew_nondef, 3), round(kurt_nondef, 3),
@@ -146,19 +146,19 @@ def statistical_tests(df, target="yd"):
             f"{round(t_stat, 3)} ({round(t_pval, 3)}{significance_stars(t_pval)})"
         ])
 
-        # ---- Table 2 ----
+        # - Table 2 -
         table2.append([
             col, N_nondef, N_def,
             f"{round(ks_stat, 3)} ({round(ks_pval, 3)}{significance_stars(ks_pval)})"
         ])
 
-        # ---- Table 3 ----
+        # - Table 3 -
         table3.append([
             col, len(data),
             f"{round(corr, 3)} ({round(corr_pval, 3)}{significance_stars(corr_pval)})"
         ])
 
-    # ----- Print Tables 1–3 -----
+    # -- Print Tables 1–3 --
     headers1 = [
         "Variable", "N_nondef", "N_def",
         "Skew_0", "Kurt_0", "JB_0(stat,p)",
@@ -200,7 +200,7 @@ def statistical_tests(df, target="yd"):
         how="inner"
     ).sort_values("Rank_t")
 
-    # ---- Table 4 Output ----
+    # - Table 4 Output -
     print("\n Table 4: Ranking by |t-stat| and |Correlation|\n")
     print(tabulate(df_rank.round(4),
                    headers=df_rank.columns,
@@ -253,7 +253,7 @@ def plot_top_corr(df, target_col, ranking_table, rank_col="Rank_corr", top_n=5):
     Plots a pairplot of the top N explanatory variables based on a ranking table.
 
     Parameters:
-    -----------
+    --
     df : pd.DataFrame
         Dataframe containing explanatory variables and target column.
     target_col : str
