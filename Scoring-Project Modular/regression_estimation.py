@@ -13,7 +13,7 @@ import numpy as np
 from scipy.stats import norm
 
 
-def run_estimation_for(df, target, explanatory_vars, output="summary", prob_var=None):
+def run_estimation_for(df, target, explanatory_vars, output="summary", prob_var=None,silent =False):
     """
     Run LPM, Logit, and Probit models, and display:
     - Regression coefficients
@@ -129,9 +129,9 @@ def run_estimation_for(df, target, explanatory_vars, output="summary", prob_var=
         # PD headers if prob_vars are given
         for model in ["LPM", "Logit", "Probit"]:
             headers += [f"{model} PD@0.25", f"{model} PD@0.50"]
-
-        print("\n Comparative Regression Table (LPM / Logit / Probit)\n")
-        print(tabulate(rows, headers=headers, tablefmt="github"))
+        if silent == False :
+            print("\n Comparative Regression Table (LPM / Logit / Probit)\n")
+            print(tabulate(rows, headers=headers, tablefmt="github"))
 
         return {"models": results_dict, "auc": auc_results}
 
@@ -171,7 +171,7 @@ def compute_auc_for_models(results_dict, y, X):
     plt.show()
 
 
-def forecast_default(models_dict, new_df, y_true, explanatory_vars, plot=True):
+def forecast_default(models_dict, new_df, y_true, explanatory_vars, plot=True,silent=False):
     """
     Use trained models to forecast default probabilities on a new dataset,
     then evaluate their performance (AUC, confusion matrix, ROC curves).
@@ -187,7 +187,8 @@ def forecast_default(models_dict, new_df, y_true, explanatory_vars, plot=True):
 
     auc_results = []
     plt.figure(figsize=(7, 6))
-    print("\n Model Forecast Evaluation\n")
+    if silent == False :
+        print("\n Model Forecast Evaluation\n")
 
     for name, model in models_dict.items():
         try:
@@ -208,11 +209,12 @@ def forecast_default(models_dict, new_df, y_true, explanatory_vars, plot=True):
             accuracy = (tp + tn) / (tp + tn + fp + fn)
 
             auc_results.append([name, len(y_true), auc, accuracy, tp, fp, fn, tn])
-
-            print(f" {name}: AUC = {auc:.3f}, Accuracy = {accuracy:.3f}")
+            if silent == False:
+                print(f" {name}: AUC = {auc:.3f}, Accuracy = {accuracy:.3f}")
 
         except Exception as e:
-            print(f" {name} prediction failed: {e}")
+            if silent == False:
+                print(f" {name} prediction failed: {e}")
             auc_results.append([name, len(y_true), np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
 
         # Plot ROC curves (optional)
@@ -228,8 +230,9 @@ def forecast_default(models_dict, new_df, y_true, explanatory_vars, plot=True):
 
     # Tabulated summary
     headers = ["Model", "N Obs", "AUC", "Accuracy", "TP", "FP", "FN", "TN"]
-    print("\n Model Evaluation Summary\n")
-    print(tabulate(auc_results, headers=headers, tablefmt="github", floatfmt=".3f"))
+    if silent == False:
+        print("\n Model Evaluation Summary\n")
+        print(tabulate(auc_results, headers=headers, tablefmt="github", floatfmt=".3f"))
 
     return pd.DataFrame(auc_results, columns=headers)
 
