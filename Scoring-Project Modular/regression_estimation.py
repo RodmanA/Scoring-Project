@@ -186,7 +186,8 @@ def forecast_default(models_dict, new_df, y_true, explanatory_vars, plot=True,si
     predictions = pd.DataFrame(index=new_df.index)
 
     auc_results = []
-    plt.figure(figsize=(7, 6))
+    if plot:
+        plt.figure(figsize=(7, 6))
     if silent == False :
         print("\n Model Forecast Evaluation\n")
 
