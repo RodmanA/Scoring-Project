@@ -168,6 +168,7 @@ def statistical_tests(df, target="yd"):
     headers2 = ["Variable", "N_nondef", "N_def", "KS-test(stat,p)"]
     headers3 = ["Variable", "N_total", "Correlation with yd (r,p)"]
 
+    print("\n Question 3 : Normality Test and correlation analysis\n")
     print("\n Table 1: Normality and T-tests per Group\n")
     print(tabulate(table1, headers=headers1, tablefmt="github"))
 
@@ -201,6 +202,7 @@ def statistical_tests(df, target="yd"):
     ).sort_values("Rank_t")
 
     # - Table 4 Output -
+    print("\n  Question 5/6 : t-stat/Correlation ranking")
     print("\n Table 4: Ranking by |t-stat| and |Correlation|\n")
     print(tabulate(df_rank.round(4),
                    headers=df_rank.columns,
@@ -238,6 +240,7 @@ def plot_lower_correlation(df, target="yd", threshold=0.8, figsize=(10, 8), cmap
     high_corr = corr_unstacked[corr_unstacked >= threshold].sort_values(ascending=False)
 
     if not high_corr.empty:
+        print("\n Question 8 : Bivariate correlation\n")
         print(f"\n Highly correlated variable pairs (|r| ≥ {threshold}):\n")
         high_corr_pairs = pd.DataFrame(high_corr).reset_index()
         high_corr_pairs.columns = ["Variable_1", "Variable_2", "|r|"]
