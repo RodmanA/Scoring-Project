@@ -36,17 +36,22 @@ df = df.apply(pd.to_numeric, errors='coerce')
 print(df.head())
 
 # New ratios / transforms
-# 1) Interaction: leverage × profitability  
-df["tdta_x_ebita"] = df["tdta"] * df["ebita"]
 
-#  curvature in leverage
-df["tdta_sq"] = df["tdta"] ** 2
+df["tdta_x_ebita"] = df["tdta"] * df["ebita"]  # Interaction: leverage × profitability  
+df["tdta_sq"] = df["tdta"] ** 2            #  curvature in leverage
+df["liq_gap"] = df["cacl"] - df["qacl"]    # liquidity gap: inventories proxy (current ratio - quick ratio)
+df["ebit_to_lta"] = df["ebita"] / df["lta"]   # efficiency of assets in producing earnings
+df["qacl_x_tdta"] = df["qacl"] * df["tdta"]   # Quick ratio × Leverage
+df["cacl_x_tdta"] = df["cacl"] * df["tdta"]   # Current ratio × Leverage
+df["ebita_x_lta"] = df["ebita"] * df["lta"]     # Profitability × Size
+df["ebita_x_gempl"] = df["ebita"] * df["gempl"] # Profitability × Employment growth
 
-# liquidity gap: inventories proxy (current ratio - quick ratio)
-df["liq_gap"] = df["cacl"] - df["qacl"]
-
-# efficiency of assets in producing earnings
-df["ebit_to_lta"] = df["ebita"] / df["lta"]
+df["qacl_x_tdta"] = df["qacl"] * df["tdta"]
+df["ebita_x_fata"] = df["ebita"] * df["fata"]
+df["gempl_x_ebita"] = df["gempl"] * df["ebita"]
+df["tdta_x_liqgap"] = df["tdta"] * df["liq_gap"]
+df["tdta_x_fata"]  = df["tdta"] * df["fata"]
+df["tdta_x_lta"]   = df["tdta"] * df["lta"]
 
 
 
