@@ -9,9 +9,12 @@ import matplotlib.pyplot as plt
 from tabulate import tabulate
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import StratifiedKFold
+from sklearn.metrics import roc_auc_score
+from data_statistical_analysis import export_tables_as_png
 
 
-def pearson_residuals(models_dict, y_true, X_new):
+def pearson_residuals(models_dict, y_true, X_new,title):
     """
     Compute and analyze standardized Pearson residuals for each model,
     highlighting default vs non-default observations.
@@ -98,6 +101,8 @@ def pearson_residuals(models_dict, y_true, X_new):
     ]
     print("\n Pearson Residual Summary by Group\n")
     print(tabulate(summary_rows, headers=headers, tablefmt="github"))
+    df1 = pd.DataFrame(summary_rows, columns=headers)
+    export_tables_as_png({f"Model_Evaluation_Summary_{title}": df1})
 
 
 def optimal_threshold(y_true, p_hat, LGD=0.6, margin=0.05, EAD=None,
@@ -238,5 +243,40 @@ def w_optimal_threshold_models(models_dict, X_new, y_true, LGD=0.6, margin=0.05,
     headers = ["Model", "N Obs", "s_closed", "s_empirical", "Min Expected Loss"]
     print("\n Optimal Threshold Summary\n")
     print(tabulate(results, headers=headers, tablefmt="github", floatfmt=".4f"))
+    df1 = pd.DataFrame(results, columns=headers)
+    export_tables_as_png({f"Optimal treshold summary": df1})
 
     return pd.DataFrame(results, columns=headers)
+
+
+def cross_val_auc(train_dataframe,target_col,random_state, explanatory_vars, model_type="Logit", number_of_split=5):
+    X = train_dataframe[explanatory_vars]
+    y = train_dataframe[target_col]
+    kf = StratifiedKFold(n_splits=number_of_split, shuffle=True, random_state=random_state)
+    aucs = []
+
+    for train_idx, val_idx in kf.split(X, y):
+        X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
+        y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
+
+        # fit the model
+        X_train = sm.add_constant(X_train)
+        X_val = sm.add_constant(X_val, has_constant="add")
+
+        if model_type == "LPM":
+            model = sm.OLS(y_train, X_train).fit(cov_type="HC3")
+            y_pred = model.predict(X_val)
+        elif model_type == "Logit":
+            model = sm.Logit(y_train, X_train).fit(disp=False)
+            y_pred = model.predict(X_val)
+        elif model_type == "Probit":
+            model = sm.Probit(y_train, X_train).fit(disp=False)
+            y_pred = model.predict(X_val)
+        else:
+            raise ValueError(f"Unknown model type: {model_type}")
+
+        # compute AUC
+        auc = roc_auc_score(y_val, y_pred)
+        aucs.append(auc)
+
+    return np.mean(aucs), np.std(aucs)

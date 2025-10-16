@@ -3,7 +3,7 @@ regression_estimation.py
 This module contain all the function relative to estimation and regression analysis
 Relevent for Question 11 to 14
 """
-from data_statistical_analysis import significance_stars
+from data_statistical_analysis import significance_stars,export_tables_as_png
 import statsmodels.api as sm
 from sklearn.metrics import roc_curve, roc_auc_score, confusion_matrix
 import matplotlib.pyplot as plt
@@ -52,6 +52,7 @@ def run_estimation_for(df, target, explanatory_vars, output="summary", prob_var=
             return linpred
 
     # Classic Python output
+
     if output == "summary":
         print("\n Linear Probability Model (LPM):\n")
         print(lpm.summary())
@@ -59,6 +60,17 @@ def run_estimation_for(df, target, explanatory_vars, output="summary", prob_var=
         print(logit.summary())
         print("\n Probit Model:\n")
         print(probit.summary())
+
+        # Convert model summaries into DataFrames
+        tables_dict = {
+            "LPM_Summary": pd.DataFrame(lpm.summary().tables[1].data),
+            "Logit_Summary": pd.DataFrame(logit.summary().tables[1].data),
+            "Probit_Summary": pd.DataFrame(probit.summary().tables[1].data)
+        }
+
+        # Export those tables as PNG images
+        export_tables_as_png(tables_dict)
+
         return results_dict
 
     # Tabulated output
@@ -129,14 +141,15 @@ def run_estimation_for(df, target, explanatory_vars, output="summary", prob_var=
         # PD headers if prob_vars are given
         for model in ["LPM", "Logit", "Probit"]:
             headers += [f"{model} PD@0.25", f"{model} PD@0.50"]
-        if silent == False :
+
+        if silent == False:
             print("\n Comparative Regression Table (LPM / Logit / Probit)\n")
             print(tabulate(rows, headers=headers, tablefmt="github"))
+            # Convert to DataFrame and export as PNG
+            comparative_df = pd.DataFrame(rows, columns=headers)
+            export_tables_as_png({f"Comparative_Regression_Table_{explanatory_vars}": comparative_df})
 
         return {"models": results_dict, "auc": auc_results}
-
-    else:
-        raise ValueError("Invalid output type. Use 'summary' or 'tabulate'.")
 
 
 def compute_auc_for_models(results_dict, y, X):
@@ -171,25 +184,33 @@ def compute_auc_for_models(results_dict, y, X):
     plt.show()
 
 
-def forecast_default(models_dict, new_df, y_true, explanatory_vars, plot=True,silent=False):
+def forecast_default(models_dict, new_df, y_true, explanatory_vars, plot=True, silent=False):
     """
     Use trained models to forecast default probabilities on a new dataset,
     then evaluate their performance (AUC, confusion matrix, ROC curves).
 
-    Returns results_df a Table summarizing AUC and accuracy for each model.
+    Returns results_df: a table summarizing AUC and accuracy for each model.
     """
     # Prepare data
     X_new = new_df[explanatory_vars].copy()
     X_new = sm.add_constant(X_new, has_constant="add")
-
     y_true = pd.Series(y_true).reset_index(drop=True)
     predictions = pd.DataFrame(index=new_df.index)
 
     auc_results = []
+
+    # Count number of default vs non-default observations
+    n_total = len(y_true)
+    n_default = (y_true == 1).sum()
+    n_non_default = (y_true == 0).sum()
+
+    # Initialize figure ONCE
     if plot:
         plt.figure(figsize=(7, 6))
-    if silent == False :
+
+    if not silent:
         print("\n Model Forecast Evaluation\n")
+        print(f"Total Obs: {n_total} | Defaults (y=1): {n_default} | Non-defaults (y=0): {n_non_default}\n")
 
     for name, model in models_dict.items():
         try:
@@ -197,43 +218,62 @@ def forecast_default(models_dict, new_df, y_true, explanatory_vars, plot=True,si
             y_pred = model.predict(X_new)
             predictions[f"P_hat_{name}"] = y_pred
 
-            # Compute AUC
+            # Compute AUC and ROC curve
             auc = roc_auc_score(y_true, y_pred)
-
-            # ROC curve
             fpr, tpr, _ = roc_curve(y_true, y_pred)
-            plt.plot(fpr, tpr, label=f"{name} (AUC = {auc:.3f})")
 
-            # confusion matrix (threshold 0.5)
+            # Plot ROC curve for this model
+            if plot:
+                plt.plot(fpr, tpr, label=f"{name} (AUC = {auc:.3f})")
+
+            # Confusion matrix (threshold 0.5)
             y_pred_class = (y_pred >= 0.5).astype(int)
             tn, fp, fn, tp = confusion_matrix(y_true, y_pred_class).ravel()
             accuracy = (tp + tn) / (tp + tn + fp + fn)
 
-            auc_results.append([name, len(y_true), auc, accuracy, tp, fp, fn, tn])
-            if silent == False:
+            # Add n_default and n_non_default to results
+            auc_results.append([
+                name,
+                n_total,
+                n_default,
+                n_non_default,
+                auc,
+                accuracy,
+                tp,
+                fp,
+                fn,
+                tn
+            ])
+
+            if not silent:
                 print(f" {name}: AUC = {auc:.3f}, Accuracy = {accuracy:.3f}")
 
         except Exception as e:
-            if silent == False:
+            if not silent:
                 print(f" {name} prediction failed: {e}")
-            auc_results.append([name, len(y_true), np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
+            auc_results.append([name, n_total, n_default, n_non_default,
+                                np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
 
-        # Plot ROC curves (optional)
-        if plot:
-            plt.plot([0, 1], [0, 1], "k--", label="Random chance")
-            plt.xlabel("False Positive Rate (1 - Specificity)")
-            plt.ylabel("True Positive Rate (Sensitivity)")
-            plt.title("ROC Curves – Out-of-Sample Default Prediction")
-            plt.legend(loc="lower right")
-            plt.grid(True, linestyle="--", alpha=0.6)
-            plt.tight_layout()
-            plt.show()
+    # Finalize ROC plot AFTER the loop
+    if plot:
+        plt.plot([0, 1], [0, 1], "k--", label="Random chance")
+        plt.xlabel("False Positive Rate (1 - Specificity)")
+        plt.ylabel("True Positive Rate (Sensitivity)")
+        plt.title("ROC Curves – Out-of-Sample Default Prediction")
+        plt.legend(loc="lower right")
+        plt.grid(True, linestyle="--", alpha=0.6)
+        plt.tight_layout()
+        plt.show()
 
-    # Tabulated summary
-    headers = ["Model", "N Obs", "AUC", "Accuracy", "TP", "FP", "FN", "TN"]
-    if silent == False:
+    # Updated headers to include Default counts
+    headers = ["Model", "N Obs", "N Default", "N Non-Default",
+               "AUC", "Accuracy", "TP", "FP", "FN", "TN"]
+
+    if not silent:
         print("\n Model Evaluation Summary\n")
         print(tabulate(auc_results, headers=headers, tablefmt="github", floatfmt=".3f"))
+        eval_summary_df = pd.DataFrame(auc_results, columns=headers)
+        export_tables_as_png({f"Model_Evaluation_Summary_{explanatory_vars}": eval_summary_df})
 
     return pd.DataFrame(auc_results, columns=headers)
 

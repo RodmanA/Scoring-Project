@@ -8,8 +8,9 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy.stats import gaussian_kde, norm,stats
+from scipy.stats import gaussian_kde, norm, stats
 from tabulate import tabulate
+import dataframe_image as dfi
 
 
 def significance_stars(p):
@@ -24,6 +25,7 @@ def significance_stars(p):
         return "*"
     else:
         return ""
+
 
 def plot_ratio_distributions(df, target="yd"):
     """
@@ -96,6 +98,7 @@ def plot_ratio_distributions(df, target="yd"):
         plt.tight_layout()
         plt.show()
 
+
 def statistical_tests(df, target="yd"):
     """
     Produce four summary tables:
@@ -107,7 +110,7 @@ def statistical_tests(df, target="yd"):
     cols = [c for c in df.columns if c != target]
     table1, table2, table3 = [], [], []
 
-    # - Compute all stats -
+    # Compute all stats
     for col in cols:
         data = df[[col, target]].dropna()
 
@@ -136,7 +139,7 @@ def statistical_tests(df, target="yd"):
         #  Pearson correlation 
         corr, corr_pval = stats.pearsonr(data[col], data[target])
 
-        # - Table 1 -
+        # Table 1
         table1.append([
             col, N_nondef, N_def,
             round(skew_nondef, 3), round(kurt_nondef, 3),
@@ -146,19 +149,19 @@ def statistical_tests(df, target="yd"):
             f"{round(t_stat, 3)} ({round(t_pval, 3)}{significance_stars(t_pval)})"
         ])
 
-        # - Table 2 -
+        # Table 2
         table2.append([
             col, N_nondef, N_def,
             f"{round(ks_stat, 3)} ({round(ks_pval, 3)}{significance_stars(ks_pval)})"
         ])
 
-        # - Table 3 -
+        # Table 3
         table3.append([
             col, len(data),
             f"{round(corr, 3)} ({round(corr_pval, 3)}{significance_stars(corr_pval)})"
         ])
 
-    # -- Print Tables 1–3 --
+    # Print Tables 1–3
     headers1 = [
         "Variable", "N_nondef", "N_def",
         "Skew_0", "Kurt_0", "JB_0(stat,p)",
@@ -170,13 +173,13 @@ def statistical_tests(df, target="yd"):
 
     print("\n Question 3 : Normality Test and correlation analysis\n")
     print("\n Table 1: Normality and T-tests per Group\n")
-    print(tabulate(table1, headers=headers1, tablefmt="github"))
+    print(tabulate(table1, headers=headers1, tablefmt="github", floatfmt=".4f"))
 
     print("\n Table 2: Kolmogorov–Smirnov Tests\n")
-    print(tabulate(table2, headers=headers2, tablefmt="github"))
+    print(tabulate(table2, headers=headers2, tablefmt="github", floatfmt=".4f"))
 
     print("\n Table 3: Correlation with yd\n")
-    print(tabulate(table3, headers=headers3, tablefmt="github"))
+    print(tabulate(table3, headers=headers3, tablefmt="github", floatfmt=".4f"))
 
     # ===== TABLE 4: RANKING =====
     df1 = pd.DataFrame(table1, columns=headers1)
@@ -201,14 +204,27 @@ def statistical_tests(df, target="yd"):
         how="inner"
     ).sort_values("Rank_t")
 
-    # - Table 4 Output -
+    # Table 4 Output
     print("\n  Question 5/6 : t-stat/Correlation ranking")
     print("\n Table 4: Ranking by |t-stat| and |Correlation|\n")
     print(tabulate(df_rank.round(4),
                    headers=df_rank.columns,
-                   tablefmt="github"))
+                   tablefmt="github", floatfmt=".4f"))
+
+    df1 = pd.DataFrame(table1, columns=headers1)
+    df2 = pd.DataFrame(table2, columns=headers2)
+    df3 = pd.DataFrame(table3, columns=headers3)
+    tables = {
+        "table1_normality": df1,
+        "table2_ks": df2,
+        "table3_correlation": df3,
+        "table4_ranking": df_rank
+    }
+
+    export_tables_as_png(tables)
 
     return table1, table2, table3, df_rank
+
 
 def plot_lower_correlation(df, target="yd", threshold=0.8, figsize=(10, 8), cmap="coolwarm"):
     """
@@ -286,3 +302,64 @@ def plot_top_corr(df, target_col, ranking_table, rank_col="Rank_corr", top_n=5):
     )
 
     plt.show()
+
+
+def export_tables_as_png(tables_dict, font="Times New Roman", font_size="12pt"):
+    """
+    Loop through a dict of DataFrames and export each styled as PNG
+    with clean academic-style formatting similar to LaTeX booktabs.
+    """
+    for name, df in tables_dict.items():
+        styled = df.style.set_table_styles([
+            # Table style
+            {
+                'selector': 'table',
+                'props': [
+                    ('font-family', f'"{font}", Times, serif'),
+                    ('font-size', font_size),
+                    ('border-collapse', 'collapse'),
+                    ('border', '0px'),
+                    ('text-align', 'center')
+                ]
+            },
+            # Header row
+            {
+                'selector': 'th',
+                'props': [
+                    ('font-family', f'"{font}", Times, serif'),
+                    ('font-size', font_size),
+                    ('font-weight', 'bold'),
+                    ('border-top', '2px solid black'),
+                    ('border-bottom', '2px solid black'),
+                    ('border-left', '0px'),
+                    ('border-right', '0px'),
+                    ('text-align', 'center'),
+                    ('padding', '4px 8px')
+                ]
+            },
+            # Data cells
+            {
+                'selector': 'td',
+                'props': [
+                    ('font-family', f'"{font}", Times, serif'),
+                    ('font-size', font_size),
+                    ('border-top', '0px'),
+                    ('border-bottom', '0px'),
+                    ('border-left', '0px'),
+                    ('border-right', '0px'),
+                    ('text-align', 'center'),
+                    ('padding', '4px 8px')
+                ]
+            },
+            # Last row bottom border
+            {
+                'selector': 'tr:last-child td',
+                'props': [
+                    ('border-bottom', '2px solid black')
+                ]
+            }
+        ])
+
+        filename = f"{name}.png"
+        dfi.export(styled, filename)
+        print(f" Saved {filename}")
